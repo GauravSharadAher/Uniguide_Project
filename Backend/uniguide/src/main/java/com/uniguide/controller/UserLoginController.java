@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -16,7 +17,12 @@ import com.uniguide.beans.University;
 import com.uniguide.beans.UserLogin;
 import com.uniguide.service.UserLoginService;
 
-import antlr.collections.List;
+import io.jsonwebtoken.JwtBuilder;
+import io.jsonwebtoken.Jwts;
+
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
 
 
 
@@ -33,27 +39,45 @@ public class UserLoginController {
 		  return ResponseEntity.ok(" user added successfully");
 	}
 	
+	public String createJWTToken() {
+        String id = UUID.randomUUID().toString().replace("-", "");
+        long nowMillis = System.currentTimeMillis();
+        Date now = new Date(nowMillis);
+        JwtBuilder builder = null;
+        try {
+            builder = Jwts.builder().setId(id).setHeaderParam("typ", "JWT")
+                                        .setIssuedAt(now)
+                                        .setSubject("");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return builder.compact();
+    }
+
 	
 	@PostMapping("/login")
-	public ResponseEntity<String> validateUser(@RequestBody UserLogin u){
+	public ResponseEntity<?> validateUser(@RequestBody UserLogin u){
 		UserLogin login= userloginservice.validate(u);
+		String jwtToken = createJWTToken();
 		if(login!=null) {
-			if(login.getRole().equals("student")) {
-				 return ResponseEntity.ok("Login succes  of student");
-			}else if(login.getRole().equals("hr")) {
-				return ResponseEntity.ok("Login Success of Hr");
-			}else if(login.getRole().equals("admin")) {
-				return ResponseEntity.ok("Admin logged in succesfully");
-			}else if(login.getRole().equals("college")) {
-				return ResponseEntity.ok("College logged in sucessfully");
-			}
+				return ResponseEntity.ok(jwtToken);
 		}	
 		return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
 		
 	}
 	
+	@GetMapping("/")
+	public ResponseEntity<List<UserLogin>> getAll(){
+		System.out.println("inside getAll");
+		List<UserLogin>ulist=userloginservice.getAll();
+		if(ulist.isEmpty())
+			return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+		return ResponseEntity.ok(ulist);
+	}
+	
 	@PutMapping("/")
-	public ResponseEntity<String> updateUniversity(@RequestBody UserLogin ul){
+	public ResponseEntity<String> updateUser(@RequestBody UserLogin ul){
 		boolean status=userloginservice.update(ul);
 		if(status)
 			return ResponseEntity.ok("user updated successfully");
